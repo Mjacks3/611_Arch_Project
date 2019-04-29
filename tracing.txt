@@ -1,0 +1,154 @@
+
+    while(trainer.get_learning_rate() >= 1e-4)
+    {
+        qimages.dequeue(images);
+        qlabels.dequeue(labels);
+        trainer.train_one_step(images, labels);
+    }
+
+
+void train_one_step (
+            const std::vector<input_type>& data,
+            const std::vector<training_label_type>& labels 
+        )
+        {
+            DLIB_CASSERT(data.size() == labels.size());
+
+            train_one_step(data.begin(), data.end(), labels.begin());
+        }
+		
+		
+		
+void train_one_step (
+            data_iterator dbegin, 
+            data_iterator dend,
+            label_iterator lbegin
+        )
+        {
+            DLIB_CASSERT(std::distance(dbegin, dend) > 0);
+
+            print_periodic_verbose_status();
+            sync_to_disk();
+            send_job(false, dbegin, dend, lbegin);
+
+            ++train_one_step_calls;
+        }
+		
+		
+		
+void send_job (
+            bool test_only,
+            data_iterator dbegin, 
+            data_iterator dend,
+            label_iterator lbegin
+        )
+        {
+            propagate_exception();
+            size_t num = std::distance(dbegin, dend);
+            size_t devs = devices.size();
+            job.t.resize(devs);
+            job.labels.resize(devs);
+            job.have_data.resize(devs);
+            job.test_only = test_only;
+
+            // chop the data into devs blocks, each of about block_size elements.
+            size_t block_size = (num+devs-1)/devs;
+
+            const auto prev_dev = dlib::cuda::get_device();
+            for (size_t i = 0; i < devs; ++i)
+            {
+                dlib::cuda::set_device(devices[i]->device_id);
+
+                size_t start = i*block_size;
+                size_t stop  = std::min(num, start+block_size);
+
+                if (start < stop)
+                {
+                    devices[i]->net.to_tensor(dbegin+start, dbegin+stop, job.t[i]);
+                    job.labels[i].assign(lbegin+start, lbegin+stop);
+                    job.have_data[i] = true;
+                }
+                else
+                {
+                    job.have_data[i] = false;
+                }
+            }
+
+            dlib::cuda::set_device(prev_dev);
+            job_pipe.enqueue(job);
+        }
+		
+		
+		
+		
+template <typename forward_iterator>
+        void to_tensor (
+            forward_iterator ibegin,
+            forward_iterator iend,
+            resizable_tensor& data
+        ) const
+		
+        {
+            DLIB_CASSERT(std::distance(ibegin,iend) > 0);
+            const auto nr = ibegin->nr();
+            const auto nc = ibegin->nc();
+            // make sure all the input matrices have the same dimensions
+            for (auto i = ibegin; i != iend; ++i)
+            {
+                DLIB_CASSERT(i->nr()==nr && i->nc()==nc,
+                    "\t input_rgb_image::to_tensor()"
+                    << "\n\t All matrices given to to_tensor() must have the same dimensions."
+                    << "\n\t nr: " << nr
+                    << "\n\t nc: " << nc
+                    << "\n\t i->nr(): " << i->nr()
+                    << "\n\t i->nc(): " << i->nc()
+                );
+            }
+
+            
+            // initialize data to the right size to contain the stuff in the iterator range.
+            data.set_size(std::distance(ibegin,iend), 3, nr, nc);
+
+
+            const size_t offset = nr*nc;
+            auto ptr = data.host();
+            for (auto i = ibegin; i != iend; ++i)
+            {
+                for (long r = 0; r < nr; ++r)
+                {
+                    for (long c = 0; c < nc; ++c)
+                    {
+                        rgb_pixel temp = (*i)(r,c);
+                        auto p = ptr++;
+                        *p = (temp.red-avg_red)/256.0; 
+                        p += offset;
+                        *p = (temp.green-avg_green)/256.0; 
+                        p += offset;
+                        *p = (temp.blue-avg_blue)/256.0; 
+                        p += offset;
+                    }
+                }
+                ptr += offset*(data.k()-1);
+            }
+
+        }
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		

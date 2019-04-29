@@ -1,0 +1,72 @@
+	.file    "representation.cpp"
+    .text
+    .globl    main
+    .type    main, @function
+main:
+.LFB0:
+    .cfi_startproc
+    pushq    %rbp
+    .cfi_def_cfa_offset 16
+    .cfi_offset 6, -16
+    movq    %rsp, %rbp
+    .cfi_def_cfa_register 6
+    movl    $0, -108(%rbp)
+    movl    $0, -112(%rbp)
+    jmp    .L2
+.L7:
+    movq    $0, -96(%rbp)
+    jmp    .L3
+.L6:
+    movq    $0, -88(%rbp)
+    jmp    .L4
+.L5:
+    movl    $0, -104(%rbp)
+    cvtsi2sd    -104(%rbp), %xmm0
+    movsd    .LC0(%rip), %xmm1
+    divsd    %xmm1, %xmm0
+    cvttsd2si    %xmm0, %eax
+    movl    %eax, -100(%rbp)
+    movl    -108(%rbp), %eax
+    addl    %eax, -100(%rbp)
+    cvtsi2sd    -104(%rbp), %xmm0
+    movsd    .LC0(%rip), %xmm1
+    divsd    %xmm1, %xmm0
+    cvttsd2si    %xmm0, %eax
+    movl    %eax, -100(%rbp)
+    movl    -108(%rbp), %eax
+    addl    %eax, -100(%rbp)
+    cvtsi2sd    -104(%rbp), %xmm0
+    movsd    .LC0(%rip), %xmm1
+    divsd    %xmm1, %xmm0
+    cvttsd2si    %xmm0, %eax
+    movl    %eax, -100(%rbp)
+    movl    -108(%rbp), %eax
+    addl    %eax, -100(%rbp)
+    addq    $1, -88(%rbp)
+.L4:
+    cmpq    $0, -88(%rbp)
+    js    .L5
+    addq    $1, -96(%rbp)
+.L3:
+    cmpq    $0, -96(%rbp)
+    js    .L6
+    movq    -80(%rbp), %rax
+    movq    %rax, -80(%rbp)
+    addl    $1, -112(%rbp)
+.L2:
+    cmpl    $0, -112(%rbp)
+    jne    .L7
+    movl    $0, %eax
+    popq    %rbp
+    .cfi_def_cfa 7, 8
+    ret
+    .cfi_endproc
+.LFE0:
+    .size    main, .-main
+    .section    .rodata
+    .align 8
+.LC0:
+    .long    0
+    .long    1081081856
+    .ident    "GCC: (Ubuntu 4.8.4-2ubuntu1~14.04.4) 4.8.4"
+    .section    .note.GNU-stack,"",@progbits
